@@ -17,7 +17,7 @@ ZentiSubs Ultra Premium Anime Player - A modern, responsive, and customizable vi
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/<your-username>/ZentiSubs-Player.git
+   git clone https://github.com/webwardenn/ZentiSubs-Player.git
    cd ZentiSubs-Player
    ```
 

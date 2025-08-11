@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZentiSubs - Ultra Premium Anime Player</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+  /* Temel stiller */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: #000;
+    color: #f5f5f5;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    justify-content: center;
+    user-select: none;
+    overflow: hidden;
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+  body.light-theme {
+    background: #f0f0f0;
+    color: #222;
+  }
+  body.light-theme .episode-card {
+    background: #fff;
+    border-color: #ccc;
+  }
+  body.light-theme .episode-card:hover, body.light-theme .episode-card.active {
+    background: #222;
+    color: #f5f5f5;
+  }
+  body.light-theme select, body.light-theme #volumeControls {
+    background: #fff;
+    border-color: #ccc;
+    color: #222;
+  }
+  body.light-theme #controlBar {
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,0.8));
+  }
+  body.light-theme #progressContainer {
+    background: linear-gradient(90deg, #ccc, #ddd);
+  }
+  body.light-theme #progressBar {
+    background: linear-gradient(90deg, #666, #888);
+  }
+  body.light-theme #bufferBar {
+    background: #aaa;
+    transition: width 0.5s ease-in-out;
+  }
+
+  #playerContainer {
+    position: relative;
+    width: 90vw;
+    max-width: 960px;
+    background: #111;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: opacity 0.3s ease, background 0.3s ease, transform 0.3s ease;
+    will-change: opacity;
+  }
+  body.light-theme #playerContainer {
+    background: #fff;
+  }
+
+  video {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: black;
+    border-radius: 12px;
+  }
+
+  /* Tam ekran */
+  :fullscreen #playerContainer,
+  :-webkit-full-screen #playerContainer {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+    transform: scale(1.01);
+  }
+  :fullscreen video,
+  :-webkit-full-screen video {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+  }
+
+  /* Ortadaki oynat/duraklat */
+  #centerPlayBtn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #f5f5f5;
+    font-size: 90px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.2s ease;
+    cursor: pointer;
+    z-index: 10;
+  }
+  body.light-theme #centerPlayBtn {
+    color: #222;
+  }
+  #centerPlayBtn.visible {
+    opacity: 0.9;
+    pointer-events: auto;
+  }
+  #centerPlayBtn:hover {
+    color: #ddd;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  body.light-theme #centerPlayBtn:hover {
+    color: #444;
+  }
+
+  /* Kontrol çubuğu */
+  #controlBar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.8));
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 20;
+    will-change: opacity;
+  }
+  #playerContainer:hover #controlBar,
+  #controlBar.show {
+    opacity: 1;
+  }
+
+  /* Intro Atla butonu */
+  #skipIntroBtn {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #f5f5f5;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.25s ease, transform 0.2s ease;
+    font-size: 14px;
+  }
+  body.light-theme #skipIntroBtn {
+    background: rgba(0,0,0,0.15);
+    color: #222;
+  }
+  #skipIntroBtn:hover {
+    background: rgba(255,255,255,0.3);
+    transform: scale(1.05);
+  }
+  body.light-theme #skipIntroBtn:hover {
+    background: rgba(0,0,0,0.3);
+  }
+
+  /* Kalite seçici */
+  #qualitySelect {
+    background: #222;
+    border: 1px solid #666;
+    color: #f5f5f5;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    transition: all 0.25s ease;
+  }
+  #qualitySelect option:checked::before {
+    content: "✔ ";
+  }
+  #qualitySelect:hover {
+    background: #333;
+    border-color: #f5f5f5;
+  }
+  #qualitySelect:focus {
+    outline: none;
+    border-color: #aaa;
+  }
+
+  /* Kontroller */
+  #bottomControls {
+    margin-top: 12px;
+    width: 90vw;
+    max-width: 960px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    opacity: 1;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  #playerContainer:not(:hover) #bottomControls {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  select {
+    background: #222;
+    border: 1px solid #666;
+    color: #f5f5f5;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    transition: all 0.25s ease;
+  }
+  select:hover {
+    background: #333;
+    border-color: #f5f5f5;
+  }
+  select:focus {
+    outline: none;
+    border-color: #aaa;
+  }
+
+  /* İlerleme çubuğu */
+  #progressContainer {
+    width: 90vw;
+    max-width: 960px;
+    height: 8px;
+    background: linear-gradient(90deg, #333, #444);
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 15px 0 0;
+    overflow: hidden;
+    position: relative;
+    transition: height 0.2s ease;
+  }
+  #progressContainer:hover {
+    height: 14px;
+  }
+  #bufferBar {
+    height: 100%;
+    background: #666;
+    width: 0%;
+    transition: width 0.5s ease-in-out;
+  }
+  #progressBar {
+    height: 100%;
+    background: linear-gradient(90deg, #ccc, #f5f5f5);
+    width: 0%;
+    transition: width 0.15s ease;
+  }
+  #seekTooltip {
+    position: absolute;
+    top: -35px;
+    background: rgba(0,0,0,0.9);
+    color: #f5f5f5;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: none;
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+  body.light-theme #seekTooltip {
+    background: rgba(255,255,255,0.9);
+    color: #222;
+  }
+
+  /* Zaman göstergesi */
+  #timeDisplay {
+    color: #ccc;
+    font-size: 13px;
+    text-align: right;
+    margin-top: 4px;
+    width: 90vw;
+    max-width: 960px;
+  }
+  body.light-theme #timeDisplay {
+    color: #444;
+  }
+
+  /* Ses kontrolleri */
+  #volumeControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #222;
+    padding: 6px 12px;
+    border-radius: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    transition: background 0.25s ease;
+  }
+  #volumeControls:hover {
+    background: #333;
+  }
+  #volumeSlider {
+    width: 100px;
+    -webkit-appearance: none;
+    background: #444;
+    height: 6px;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+  }
+  #volumeSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #f5f5f5;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+  #volumeSlider:hover {
+    height: 8px;
+  }
+  .control-btn {
+    background: transparent;
+    border: none;
+    color: #f5f5f5;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 12px;
+    transition: color 0.25s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  body.light-theme .control-btn {
+    color: #222;
+  }
+  .control-btn:hover {
+    color: #ddd;
+    transform: scale(1.1);
+    box-shadow: 0 0 8px rgba(255,255,255,0.5);
+  }
+  body.light-theme .control-btn:hover {
+    color: #444;
+    box-shadow: 0 0 8px rgba(0,0,0,0.5);
+  }
+  /* Tam ekran butonu için özel hover efekti */
+  #fullscreenBtn:hover {
+    box-shadow: 0 0 12px rgba(255,255,255,0.7);
+  }
+  body.light-theme #fullscreenBtn:hover {
+    box-shadow: 0 0 12px rgba(0,0,0,0.7);
+  }
+  @media (max-width: 720px) {
+    .control-btn {
+      padding: 8px 10px;
+      font-size: 18px;
+    }
+    #fullscreenBtn {
+      padding: 8px 12px;
+    }
+  }
+
+  /* Altyazı ayarları */
+  #subtitleSettings {
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    background: #222;
+    border: 1px solid #666;
+    border-radius: 8px;
+    padding: 12px;
+    display: none;
+    z-index: 30;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  body.light-theme #subtitleSettings {
+    background: #fff;
+    border-color: #ccc;
+  }
+  #subtitleSettings.show {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  #subtitleSettings label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #f5f5f5;
+  }
+  body.light-theme #subtitleSettings label {
+    color: #222;
+  }
+  #subtitleSettings select {
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  /* Bölüm kartları */
+  #episodeList {
+    margin-top: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    max-width: 960px;
+    max-height: 180px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #666 #222;
+  }
+  #episodeList::-webkit-scrollbar {
+    width: 8px;
+  }
+  #episodeList::-webkit-scrollbar-track {
+    background: #222;
+  }
+  body.light-theme #episodeList::-webkit-scrollbar-track {
+    background: #fff;
+  }
+  #episodeList::-webkit-scrollbar-thumb {
+    background: #666;
+    border-radius: 4px;
+  }
+  .episode-card {
+    background: #222;
+    border: 1px solid #555;
+    color: #f5f5f5;
+    padding: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    width: 160px;
+    text-align: center;
+    transition: all 0.3s ease;
+    transform: perspective(500px) rotateY(0deg);
+  }
+  .episode-card:hover, .episode-card.active {
+    background: #f5f5f5;
+    color: #222;
+    border-color: #fff;
+    transform: perspective(500px) rotateY(5deg);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  }
+  .episode-card .play-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+  }
+  .episode-card:hover .play-icon {
+    opacity: 1;
+  }
+  .episode-card .title {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .episode-card .duration {
+    font-size: 12px;
+    color: #ccc;
+  }
+  .episode-card .progress {
+    height: 4px;
+    background: #444;
+    border-radius: 2px;
+    margin-top: 8px;
+  }
+  .episode-card .progress-bar {
+    height: 100%;
+    background: #f5f5f5;
+    width: 0%;
+    border-radius: 2px;
+  }
+  body.light-theme .episode-card .progress {
+    background: #ccc;
+  }
+  body.light-theme .episode-card .progress-bar {
+    background: #666;
+  }
+
+  /* Yükleme animasyonu */
+  #loadingSpinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    border: 5px solid transparent;
+    border-top: 5px solid #f5f5f5;
+    border-right: 5px solid #666;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+    z-index: 30;
+  }
+  @keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+
+  /* ZentiSubs branding */
+  #branding {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 900;
+    color: #f5f5f5;
+    font-size: 72px;
+    letter-spacing: 8px;
+    font-family: "Segoe UI Black", Arial Black, sans-serif;
+    cursor: default;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 1;
+    animation: brandingFade 3s ease forwards;
+  }
+  body.light-theme #branding {
+    color: #222;
+  }
+  @keyframes brandingFade {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    70% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); display: none; }
+  }
+
+  /* Hata mesajı */
+  #errorMessage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #f5f5f5;
+    background: rgba(200,0,0,0.9);
+    font-size: 16px;
+    text-align: center;
+    padding: 15px 25px;
+    border-radius: 8px;
+    z-index: 30;
+    display: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  }
+  body.light-theme #errorMessage {
+    background: rgba(200,0,0,0.8);
+    color: #222;
+  }
+  #errorMessage button {
+    background: #f5f5f5;
+    color: #222;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: background 0.25s ease;
+  }
+  body.light-theme #errorMessage button {
+    background: #222;
+    color: #f5f5f5;
+  }
+  #errorMessage button:hover {
+    background: #fff;
+  }
+  body.light-theme #errorMessage button:hover {
+    background: #333;
+  }
+
+  /* Sonraki bölüm bildirimi */
+  #nextEpisodePrompt {
+    position: absolute;
+    bottom: 100px;
+    right: 20px;
+    background: rgba(0,0,0,0.8);
+    color: #f5f5f5;
+    padding: 12px 20px;
+    border-radius: 8px;
+    display: none;
+    z-index: 30;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  }
+  body.light-theme #nextEpisodePrompt {
+    background: rgba(255,255,255,0.8);
+    color: #222;
+  }
+  #nextEpisodePrompt button {
+    background: #f5f5f5;
+    color: #222;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: background 0.25s ease;
+  }
+  body.light-theme #nextEpisodePrompt button {
+    background: #222;
+    color: #f5f5f5;
+  }
+  #nextEpisodePrompt button:hover {
+    background: #fff;
+  }
+  body.light-theme #nextEpisodePrompt button:hover {
+    background: #333;
+  }
+
+  /* Altyazı stilleri */
+  video::cue {
+    background: rgba(0,0,0,0.7);
+    color: #f5f5f5;
+    font-size: 18px;
+    padding: 5px;
+    border-radius: 5px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  }
+
+  /* Responsive */
+  @media (max-width: 720px) {
+    #playerContainer {
+      width: 95vw;
+    }
+    #bottomControls {
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .episode-card {
+      width: 140px;
+    }
+    #volumeControls {
+      padding: 4px 8px;
+    }
+    #volumeSlider {
+      width: 80px;
+    }
+    #controlBar {
+      padding: 8px 12px;
+    }
+    .control-btn {
+      font-size: 18px;
+      padding: 4px 8px;
+    }
+    #branding {
+      font-size: 48px;
+      letter-spacing: 4px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="branding" aria-label="ZentiSubs Marka Logosu">ZentiSubs</div>
+
+<div id="playerContainer" role="region" aria-label="ZentiSubs Anime Player" style="visibility:hidden;">
+  <video id="video" crossorigin="anonymous" playsinline webkit-playsinline preload="metadata" tabindex="0"></video>
+
+  <div id="centerPlayBtn" title="Oynat / Duraklat" aria-label="Oynat / Duraklat Butonu"><i class="fas fa-play"></i></div>
+
+  <div id="controlBar" aria-label="Video Kontrolleri">
+    <button id="skipIntroBtn" title="Intro Atla" style="display:none;">Intro Atla</button>
+    <div id="volumeControls">
+      <button class="control-btn" id="rewindBtn" title="10 Saniye Geri" aria-label="10 Saniye Geri"><i class="fas fa-backward"></i></button>
+      <button class="control-btn" id="bottomPlayPauseBtn" title="Oynat / Duraklat" aria-label="Oynat / Duraklat Butonu"><i class="fas fa-play"></i></button>
+      <button class="control-btn" id="fastForwardBtn" title="10 Saniye İleri" aria-label="10 Saniye İleri"><i class="fas fa-forward"></i></button>
+      <button class="control-btn" id="muteBtn" title="Sessiz / Sesli" aria-label="Sessiz / Sesli Butonu"><i class="fas fa-volume-up"></i></button>
+      <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1" aria-label="Ses Seviyesi"/>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button class="control-btn" id="themeToggleBtn" title="Tema Değiştir" aria-label="Tema Değiştir"><i class="fas fa-adjust"></i></button>
+      <button class="control-btn" id="pipBtn" title="Mini Oynatıcı" aria-label="Mini Oynatıcı"><i class="fas fa-tv"></i></button>
+      <button class="control-btn" id="shareBtn" title="Paylaş" aria-label="Paylaş"><i class="fas fa-share-alt"></i></button>
+      <button class="control-btn" id="subtitleSettingsBtn" title="Altyazı Ayarları" aria-label="Altyazı Ayarları"><i class="fas fa-cog"></i></button>
+      <button class="control-btn" id="fullscreenBtn" title="Tam Ekran" aria-label="Tam Ekran Yap"><i class="fas fa-expand"></i></button>
+      <select id="qualitySelect" title="Kalite Seçimi" aria-label="Kalite Seçimi"></select>
+    </div>
+  </div>
+
+  <div id="subtitleSettings" aria-label="Altyazı Ayarları">
+    <label>Altyazı Boyutu:
+      <select id="subtitleSizeSelect">
+        <option value="14px">Çok Küçük</option>
+        <option value="16px">Küçük</option>
+        <option value="18px" selected>Normal</option>
+        <option value="22px">Büyük</option>
+        <option value="26px">Çok Büyük</option>
+      </select>
+    </label>
+    <label>Altyazı Rengi:
+      <select id="subtitleColorSelect">
+        <option value="white" selected>Beyaz</option>
+        <option value="yellow">Sarı</option>
+        <option value="blue">Mavi</option>
+        <option value="red">Kırmızı</option>
+        <option value="green">Yeşil</option>
+      </select>
+    </label>
+    <label>Arka Plan Opaklığı:
+      <select id="subtitleOpacitySelect">
+        <option value="0.5">Şeffaf</option>
+        <option value="0.7" selected>Normal</option>
+        <option value="0.9">Opak</option>
+      </select>
+    </label>
+  </div>
+
+  <div id="nextEpisodePrompt" aria-label="Sonraki Bölüm Bildirimi">
+    Sonraki bölüm oynatılsın mı? <button onclick="playNextEpisode()">Evet</button><button onclick="cancelNextEpisode()">Hayır</button>
+  </div>
+
+  <div id="loadingSpinner" aria-label="Yükleniyor"></div>
+  <div id="errorMessage" aria-live="assertive"></div>
+</div>
+
+<div id="progressContainer" title="İlerle / Geri Sar" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0" style="visibility:hidden;">
+  <div id="bufferBar"></div>
+  <div id="progressBar"></div>
+  <div id="seekTooltip"></div>
+</div>
+
+<div id="timeDisplay" aria-live="polite" aria-atomic="true" aria-label="Zaman göstergesi" style="visibility:hidden;">
+  0:00 / 0:00
+</div>
+
+<div id="bottomControls" aria-label="Alt Kontroller" style="visibility:hidden;">
+  <div style="display: flex; gap: 12px;">
+    <select id="subtitleSelect" title="Altyazı Seçimi" aria-label="Altyazı Seçimi"></select>
+    <select id="speedSelect" title="Hız Seçimi" aria-label="Hız Seçimi">
+      <option value="0.25">0.25x</option>
+      <option value="0.5">0.5x</option>
+      <option value="0.75">0.75x</option>
+      <option value="1" selected>1x</option>
+      <option value="1.25">1.25x</option>
+      <option value="1.5">1.5x</option>
+      <option value="1.75">1.75x</option>
+      <option value="2">2x</option>
+    </select>
+  </div>
+</div>
+
+<div id="episodeList" aria-label="Bölüm Listesi" role="list" style="visibility:hidden;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script>
+  const video = document.getElementById("video");
+  const centerPlayBtn = document.getElementById("centerPlayBtn");
+  const skipIntroBtn = document.getElementById("skipIntroBtn");
+  const qualitySelect = document.getElementById("qualitySelect");
+  const progressContainer = document.getElementById("progressContainer");
+  const progressBar = document.getElementById("progressBar");
+  const bufferBar = document.getElementById("bufferBar");
+  const seekTooltip = document.getElementById("seekTooltip");
+  const timeDisplay = document.getElementById("timeDisplay");
+  const subtitleSelect = document.getElementById("subtitleSelect");
+  const speedSelect = document.getElementById("speedSelect");
+  const subtitleSettingsBtn = document.getElementById("subtitleSettingsBtn");
+  const subtitleSettings = document.getElementById("subtitleSettings");
+  const subtitleSizeSelect = document.getElementById("subtitleSizeSelect");
+  const subtitleColorSelect = document.getElementById("subtitleColorSelect");
+  const subtitleOpacitySelect = document.getElementById("subtitleOpacitySelect");
+  const fullscreenBtn = document.getElementById("fullscreenBtn");
+  const themeToggleBtn = document.getElementById("themeToggleBtn");
+  const pipBtn = document.getElementById("pipBtn");
+  const shareBtn = document.getElementById("shareBtn");
+  const episodeListEl = document.getElementById("episodeList");
+  const bottomPlayPauseBtn = document.getElementById("bottomPlayPauseBtn");
+  const rewindBtn = document.getElementById("rewindBtn");
+  const fastForwardBtn = document.getElementById("fastForwardBtn");
+  const muteBtn = document.getElementById("muteBtn");
+  const volumeSlider = document.getElementById("volumeSlider");
+  const playerContainer = document.getElementById("playerContainer");
+  const controlBar = document.getElementById("controlBar");
+  const bottomControls = document.getElementById("bottomControls");
+  const loadingSpinner = document.getElementById("loadingSpinner");
+  const errorMessage = document.getElementById("errorMessage");
+  const nextEpisodePrompt = document.getElementById("nextEpisodePrompt");
+  const branding = document.getElementById("branding");
+
+  const episodes = [
+    {
+      title: "Bölüm 1",
+      url: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8",
+      subs: [
+        { label: "Türkçe", src: "https://gist.githubusercontent.com/inorwesta/7e0924cbb73f5f21386d073f252a0310/raw/tr.vtt", srclang: "tr" },
+        { label: "İngilizce", src: "https://gist.githubusercontent.com/inorwesta/7e0924cbb73f5f21386d073f252a0310/raw/en.vtt", srclang: "en" },
+      ],
+      op: { start: 0, end: 10 },
+      duration: "24:00",
+      previewUrl: "https://example.com/preview1.mp4",
+    },
+    {
+      title: "Bölüm 2",
+      url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+      subs: [{ label: "İngilizce", src: "https://gist.githubusercontent.com/inorwesta/7e0924cbb73f5f21386d073f252a0310/raw/en.vtt", srclang: "en" }],
+      op: { start: 0, end: 8 },
+      duration: "22:00",
+      previewUrl: "https://example.com/preview2.mp4",
+    },
+  ];
+
+  let hls = null;
+  let currentEpIndex = 0;
+  let introSkipped = false;
+  let lastVolume = 1;
+  let controlHideTimer;
+  let playbackHistory = JSON.parse(localStorage.getItem("zentiSubsHistory")) || {};
+
+  // Tema yükleme
+  function loadTheme() {
+    const savedTheme = localStorage.getItem("zentiSubsTheme") || "dark";
+    document.body.className = savedTheme + "-theme";
+    themeToggleBtn.innerHTML = savedTheme === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  }
+
+  themeToggleBtn.onclick = () => {
+    const newTheme = document.body.classList.contains("light-theme") ? "dark" : "light";
+    document.body.className = newTheme + "-theme";
+    localStorage.setItem("zentiSubsTheme", newTheme);
+    themeToggleBtn.innerHTML = newTheme === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    showControlsTemporarily();
+  };
+
+  // Açılış animasyonu
+  branding.addEventListener("animationend", () => {
+    branding.style.display = "none";
+    playerContainer.style.visibility = "visible";
+    progressContainer.style.visibility = "visible";
+    timeDisplay.style.visibility = "visible";
+    bottomControls.style.visibility = "visible";
+    episodeListEl.style.visibility = "visible";
+  });
+
+  function setupHLS(url) {
+    if (hls) {
+      hls.destroy();
+      hls = null;
+    }
+    errorMessage.style.display = "none";
+    loadingSpinner.style.display = "block";
+    playerContainer.style.opacity = "0.5";
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        abrEwmaFastLive: 3.0,
+        abrEwmaSlowLive: 9.0,
+      });
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        populateQualityLevels();
+        resumePlayback();
+        showControlsTemporarily();
+        centerPlayBtn.onclick = () => {
+          video.play().catch(e => {
+            console.error("Oynatma hatası:", e);
+            showError("Video oynatılamadı. Lütfen tekrar deneyin.<br><button onclick='loadEpisode(currentEpIndex)'>Tekrar Dene</button>");
+          });
+        };
+        loadingSpinner.style.display = "none";
+        playerContainer.style.opacity = "1";
+      });
+      hls.on(Hls.Events.LEVEL_SWITCHED, populateQualityLevels);
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        loadingSpinner.style.display = "none";
+        playerContainer.style.opacity = "1";
+        if (data.fatal) {
+          showError(`Video yüklenirken hata oluştu: ${data.type}<br><button onclick='loadEpisode(currentEpIndex)'>Tekrar Dene</button>`);
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError();
+              break;
+            default:
+              hls.destroy();
+              break;
+          }
+        }
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = url;
+      resumePlayback();
+      showControlsTemporarily();
+      centerPlayBtn.onclick = () => {
+        video.play().catch(e => {
+          console.error("Oynatma hatası:", e);
+          showError("Video oynatılamadı. Lütfen tekrar deneyin.");
+        });
+      };
+      loadingSpinner.style.display = "none";
+      playerContainer.style.opacity = "1";
+    } else {
+      video.src = url;
+      resumePlayback();
+      showControlsTemporarily();
+      centerPlayBtn.onclick = () => {
+        video.play().catch(e => {
+          console.error("Oynatma hatası:", e);
+          showError("Video oynatılamadı. Lütfen tekrar deneyin.");
+        });
+      };
+      loadingSpinner.style.display = "none";
+      playerContainer.style.opacity = "1";
+    }
+  }
+
+  function populateQualityLevels() {
+    if (!hls || !hls.levels) return;
+    qualitySelect.innerHTML = "";
+    const autoOption = document.createElement("option");
+    autoOption.value = "-1";
+    autoOption.textContent = "Otomatik";
+    qualitySelect.appendChild(autoOption);
+    hls.levels.forEach((level, i) => {
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = level.height ? `${level.height}p` : `Seviye ${i}`;
+      qualitySelect.appendChild(option);
+    });
+    qualitySelect.value = hls.autoLevelEnabled ? "-1" : hls.currentLevel;
+  }
+
+  qualitySelect.onchange = () => {
+    if (hls) {
+      hls.nextLevel = parseInt(qualitySelect.value);
+    }
+  };
+
+  function addSubtitlesForEpisode(ep) {
+    const oldTracks = video.querySelectorAll("track");
+    oldTracks.forEach(t => t.remove());
+    subtitleSelect.innerHTML = '<option value="none">Altyazı Kapat</option>';
+    if (!ep.subs || ep.subs.length === 0) {
+      return;
+    }
+    ep.subs.forEach((sub, i) => {
+      const track = document.createElement("track");
+      track.kind = "subtitles";
+      track.label = sub.label;
+      track.srclang = sub.srclang;
+      track.src = sub.src;
+      if (i === 0) track.default = true;
+      video.appendChild(track);
+
+      const option = document.createElement("option");
+      option.value = sub.srclang;
+      option.textContent = sub.label;
+      subtitleSelect.appendChild(option);
+    });
+    updateSubtitleStyle();
+  }
+
+  subtitleSelect.onchange = () => {
+    const lang = subtitleSelect.value;
+    for (let i = 0; i < video.textTracks.length; i++) {
+      video.textTracks[i].mode = (lang === "none" ? "disabled" : (video.textTracks[i].language === lang ? "showing" : "disabled"));
+    }
+  };
+
+  subtitleSettingsBtn.onclick = () => {
+    subtitleSettings.classList.toggle("show");
+    showControlsTemporarily();
+  };
+
+  subtitleSizeSelect.onchange = updateSubtitleStyle;
+  subtitleColorSelect.onchange = updateSubtitleStyle;
+  subtitleOpacitySelect.onchange = updateSubtitleStyle;
+
+  function updateSubtitleStyle() {
+    const size = subtitleSizeSelect.value;
+    const color = subtitleColorSelect.value;
+    const opacity = subtitleOpacitySelect.value;
+    const style = document.createElement("style");
+    style.textContent = `video::cue { font-size: ${size}; color: ${color}; background: rgba(0,0,0,${opacity}); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }`;
+    document.head.appendChild(style);
+  }
+
+  function togglePlayPause() {
+    if (video.paused) {
+      video.play().catch(e => showError("Video oynatılamadı. Lütfen tekrar deneyin."));
+    } else {
+      video.pause();
+    }
+  }
+
+  centerPlayBtn.onclick = togglePlayPause;
+  bottomPlayPauseBtn.onclick = togglePlayPause;
+  video.onclick = togglePlayPause;
+  video.ondblclick = () => fullscreenBtn.onclick();
+
+  rewindBtn.onclick = () => {
+    video.currentTime = Math.max(0, video.currentTime - 10);
+    showControlsTemporarily();
+  };
+  fastForwardBtn.onclick = () => {
+    video.currentTime = Math.min(video.duration, video.currentTime + 10);
+    showControlsTemporarily();
+  };
+
+  video.addEventListener("play", () => {
+    centerPlayBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    bottomPlayPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    showControlsTemporarily();
+  });
+  video.addEventListener("pause", () => {
+    centerPlayBtn.innerHTML = '<i class="fas fa-play"></i>';
+    bottomPlayPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+    showControlsTemporarily();
+  });
+
+  video.addEventListener("timeupdate", () => {
+    if (isNaN(video.duration)) return;
+    const progressPercent = (video.currentTime / video.duration) * 100;
+    requestAnimationFrame(() => {
+      progressBar.style.width = progressPercent + "%";
+      timeDisplay.textContent = formatTime(video.currentTime) + " / " + formatTime(video.duration);
+    });
+    const buffered = video.buffered;
+    if (buffered.length) {
+      const bufferedEnd = buffered.end(buffered.length - 1);
+      const bufferedPercent = (bufferedEnd / video.duration) * 100;
+      bufferBar.style.width = bufferedPercent + "%";
+    }
+    playbackHistory[currentEpIndex] = video.currentTime;
+    localStorage.setItem("zentiSubsHistory", JSON.stringify(playbackHistory));
+    updateSkipIntroVisibility();
+  });
+
+  video.addEventListener("ended", () => {
+    if (currentEpIndex < episodes.length - 1) {
+      nextEpisodePrompt.style.display = "block";
+      setTimeout(() => {
+        nextEpisodePrompt.style.display = "none";
+        if (video.paused) cancelNextEpisode();
+      }, 5000);
+    }
+  });
+
+  function playNextEpisode() {
+    nextEpisodePrompt.style.display = "none";
+    currentEpIndex++;
+    loadEpisode(currentEpIndex);
+  }
+
+  function cancelNextEpisode() {
+    nextEpisodePrompt.style.display = "none";
+  }
+
+  let isSeeking = false;
+  progressContainer.addEventListener("mousemove", (e) => {
+    const rect = progressContainer.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    const time = pos * video.duration;
+    seekTooltip.style.left = `${e.clientX - rect.left}px`;
+    seekTooltip.textContent = formatTime(time);
+    seekTooltip.style.display = "block";
+  });
+  progressContainer.addEventListener("mouseleave", () => {
+    seekTooltip.style.display = "none";
+  });
+  progressContainer.addEventListener("mousedown", (e) => {
+    isSeeking = true;
+    updateSeek(e);
+  });
+  document.addEventListener("mousemove", (e) => {
+    if (isSeeking) updateSeek(e);
+  });
+  document.addEventListener("mouseup", () => {
+    isSeeking = false;
+  });
+
+  function updateSeek(e) {
+    const rect = progressContainer.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const newTime = (clickX / rect.width) * video.duration;
+    video.currentTime = newTime;
+  }
+
+  function toggleMute() {
+    if (video.muted) {
+      video.muted = false;
+      video.volume = lastVolume;
+    } else {
+      lastVolume = video.volume;
+      video.muted = true;
+      video.volume = 0;
+    }
+    updateMuteButton();
+  }
+  function updateMuteButton() {
+    muteBtn.innerHTML = video.muted || video.volume === 0 ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+    volumeSlider.value = video.muted ? 0 : video.volume;
+  }
+  muteBtn.onclick = toggleMute;
+  volumeSlider.oninput = () => {
+    video.volume = volumeSlider.value;
+    video.muted = video.volume === 0;
+    lastVolume = video.volume > 0 ? video.volume : lastVolume;
+    updateMuteButton();
+  };
+  video.volume = 1;
+  updateMuteButton();
+
+  // Dokunmatik ileri/geri ve bölüm değiştirme
+  let lastTouchTime = 0;
+  let touchStartX = 0;
+  playerContainer.addEventListener("touchstart", (e) => {
+    const now = Date.now();
+    touchStartX = e.touches[0].clientX;
+    if (now - lastTouchTime < 300) {
+      const rect = playerContainer.getBoundingClientRect();
+      const touchX = e.touches[0].clientX - rect.left;
+      if (touchX < rect.width / 3) {
+        video.currentTime = Math.max(0, video.currentTime - 10);
+      } else if (touchX > (rect.width * 2) / 3) {
+        video.currentTime = Math.min(video.duration, video.currentTime + 10);
+      }
+    }
+    lastTouchTime = now;
+    showControlsTemporarily();
+  });
+  playerContainer.addEventListener("touchmove", (e) => {
+    if (e.touches.length === 3) {
+      const touchEndX = e.touches[0].clientX;
+      if (touchEndX - touchStartX > 100 && currentEpIndex > 0) {
+        currentEpIndex--;
+        loadEpisode(currentEpIndex);
+      } else if (touchStartX - touchEndX > 100 && currentEpIndex < episodes.length - 1) {
+        currentEpIndex++;
+        loadEpisode(currentEpIndex);
+      }
+    }
+  });
+
+  window.addEventListener("keydown", e => {
+    if (document.activeElement.tagName.toLowerCase() === "input" || document.activeElement.tagName.toLowerCase() === "select") return;
+    switch (e.key.toLowerCase()) {
+      case " ":
+        e.preventDefault();
+        togglePlayPause();
+        break;
+      case "m":
+        toggleMute();
+        break;
+      case "f":
+        fullscreenBtn.onclick();
+        break;
+      case "t":
+        subtitleSelect.value = subtitleSelect.value === "none" ? subtitleSelect.options[1]?.value || "none" : "none";
+        subtitleSelect.onchange();
+        break;
+      case "c":
+        subtitleSettingsBtn.onclick();
+        break;
+      case "q":
+        qualitySelect.focus();
+        break;
+      case "s":
+        speedSelect.focus();
+        break;
+      case "p":
+        episodeListEl.querySelector(".episode-card")?.focus();
+        break;
+      case "n":
+        if (currentEpIndex < episodes.length - 1) {
+          currentEpIndex++;
+          loadEpisode(currentEpIndex);
+        }
+        break;
+      case "b":
+        if (currentEpIndex > 0) {
+          currentEpIndex--;
+          loadEpisode(currentEpIndex);
+        }
+        break;
+      case "z":
+        themeToggleBtn.onclick();
+        break;
+      case "h":
+        if (confirm("Oynatma geçmişi sıfırlansın mı?")) {
+          playbackHistory = {};
+          localStorage.removeItem("zentiSubsHistory");
+          loadEpisodeList();
+        }
+        break;
+      case "arrowright":
+        video.currentTime = Math.min(video.duration, video.currentTime + 10);
+        break;
+      case "arrowleft":
+        video.currentTime = Math.max(0, video.currentTime - 10);
+        break;
+      case "arrowup":
+        video.volume = Math.min(1, video.volume + 0.1);
+        updateMuteButton();
+        break;
+      case "arrowdown":
+        video.volume = Math.max(0, video.volume - 0.1);
+        updateMuteButton();
+        break;
+      case "j":
+        video.currentTime = Math.max(0, video.currentTime - 5);
+        break;
+      case "l":
+        video.currentTime = Math.min(video.duration, video.currentTime + 5);
+        break;
+    }
+    showControlsTemporarily();
+  });
+
+  speedSelect.onchange = () => {
+    video.playbackRate = parseFloat(speedSelect.value);
+  };
+
+  fullscreenBtn.onclick = () => {
+    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!isFullscreen) {
+      if (playerContainer.requestFullscreen) playerContainer.requestFullscreen();
+      else if (playerContainer.webkitRequestFullscreen) playerContainer.webkitRequestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+    showControlsTemporarily();
+  };
+
+  document.addEventListener("fullscreenchange", onFullscreenChange);
+  document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+
+  function onFullscreenChange() {
+    const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    if (isFullscreen) {
+      document.body.style.overflow = "hidden";
+      if (screen.orientation) {
+        screen.orientation.lock("landscape").catch(() => {});
+      }
+      bottomControls.style.transform = "translateY(0)";
+      fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+      fullscreenBtn.setAttribute("aria-label", "Tam Ekrandan Çık");
+      fullscreenBtn.title = "Tam Ekrandan Çık";
+      showControlsTemporarily();
+    } else {
+      document.body.style.overflow = "";
+      if (screen.orientation) {
+        screen.orientation.unlock().catch(() => {});
+      }
+      bottomControls.style.transform = "translateY(20px)";
+      setTimeout(() => bottomControls.style.transform = "translateY(0)", 300);
+      fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+      fullscreenBtn.setAttribute("aria-label", "Tam Ekran Yap");
+      fullscreenBtn.title = "Tam Ekran";
+      showControlsTemporarily();
+    }
+  }
+
+  pipBtn.onclick = () => {
+    if (document.pictureInPictureEnabled && !video.disablePictureInPicture) {
+      if (document.pictureInPictureElement) {
+        document.exitPictureInPicture();
+      } else {
+        video.requestPictureInPicture().catch(e => showError("Mini oynatıcı başlatılamadı."));
+      }
+    } else {
+      showError("Mini oynatıcı bu tarayıcıda desteklenmiyor.");
+    }
+    showControlsTemporarily();
+  };
+
+  shareBtn.onclick = () => {
+    const ep = episodes[currentEpIndex];
+    const shareText = `Şu anda ZentiSubs'ta "${ep.title}" izliyorum! (${formatTime(video.currentTime)})`;
+    const shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+    window.open(shareUrl, "_blank");
+    showControlsTemporarily();
+  };
+
+  function loadEpisodeList() {
+    episodeListEl.innerHTML = "";
+    episodes.forEach((ep, i) => {
+      const progress = playbackHistory[i] ? (playbackHistory[i] / parseDuration(ep.duration)) * 100 : 0;
+      const card = document.createElement("div");
+      card.className = `episode-card ${i === currentEpIndex ? "active" : ""}`;
+      card.tabIndex = 0;
+      card.innerHTML = `
+        <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        <div class="title">${ep.title}</div>
+        <div class="duration">${ep.duration}</div>
+        <div class="progress"><div class="progress-bar" style="width: ${progress}%"></div></div>
+      `;
+      card.onclick = () => {
+        if (currentEpIndex !== i) {
+          currentEpIndex = i;
+          introSkipped = false;
+          loadEpisode(i);
+        }
+      };
+      episodeListEl.appendChild(card);
+    });
+  }
+
+  function updateSkipIntroVisibility() {
+    const ep = episodes[currentEpIndex];
+    if (!ep.op) {
+      skipIntroBtn.style.display = "none";
+      return;
+    }
+    const current = video.currentTime;
+    if (current >= ep.op.start && current < ep.op.end && !introSkipped) {
+      skipIntroBtn.style.display = "inline-block";
+    } else {
+      skipIntroBtn.style.display = "none";
+    }
+  }
+
+  skipIntroBtn.onclick = () => {
+    if (!introSkipped && episodes[currentEpIndex].op) {
+      video.currentTime = episodes[currentEpIndex].op.end;
+      introSkipped = true;
+      updateSkipIntroVisibility();
+    }
+  };
+
+  function loadEpisode(index) {
+    const ep = episodes[index];
+    playerContainer.style.opacity = "0.5";
+    setTimeout(() => {
+      setupHLS(ep.url);
+      addSubtitlesForEpisode(ep);
+      speedSelect.value = "1";
+      video.playbackRate = 1;
+      loadEpisodeList();
+      introSkipped = false;
+      updateSkipIntroVisibility();
+      showControlsTemporarily();
+      playerContainer.style.opacity = "1";
+    }, 300);
+  }
+
+  function resumePlayback() {
+    if (playbackHistory[currentEpIndex] && !introSkipped) {
+      video.currentTime = playbackHistory[currentEpIndex];
+    }
+  }
+
+  function parseDuration(duration) {
+    const parts = duration.split(":").map(Number);
+    return parts[0] * 60 + parts[1];
+  }
+
+  function formatTime(time) {
+    if (isNaN(time)) return "0:00";
+    const h = Math.floor(time / 3600);
+    const m = Math.floor((time % 3600) / 60);
+    const s = Math.floor(time % 60);
+    return (h > 0 ? h + ":" : "") + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+  }
+
+  function showControlsTemporarily() {
+    controlBar.style.opacity = "1";
+    bottomControls.style.opacity = "1";
+    clearTimeout(controlHideTimer);
+    controlHideTimer = setTimeout(() => {
+      if (!video.paused) {
+        controlBar.style.opacity = "0";
+        bottomControls.style.opacity = "0";
+      }
+    }, 3000);
+  }
+
+  function showError(message) {
+    errorMessage.innerHTML = message;
+    errorMessage.style.display = "block";
+    setTimeout(() => errorMessage.style.display = "none", 5000);
+  }
+
+  playerContainer.addEventListener("mousemove", showControlsTemporarily);
+  playerContainer.addEventListener("touchstart", showControlsTemporarily);
+
+  loadTheme();
+  loadEpisode(currentEpIndex);
+  centerPlayBtn.innerHTML = '<i class="fas fa-play"></i>';
+  bottomPlayPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+  showControlsTemporarily();
+</script>
+</body>
+</html>

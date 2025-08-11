@@ -17,7 +17,7 @@ ZentiSubs Ultra Premium Anime Player - A modern, responsive, and customizable vi
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/webwardenn/ZentiSubs-Player.git
+   git clone https://github.com/<your-username>/ZentiSubs-Player.git
    cd ZentiSubs-Player
    ```
 
@@ -55,6 +55,16 @@ ZentiSubs Ultra Premium Anime Player - A modern, responsive, and customizable vi
 
 - **Subtitle Settings**:
   - Customize subtitle size, color, and background opacity via the settings button in the top-right corner.
+
+## Screenshots
+
+Below are some glimpses of the ZentiSubs-Player in action! 🌟
+
+- **Input Mode (Dark Theme)**: The main player interface with controls and subtitle settings visible.
+  ![Input Mode](screenshots/zentisubs.png)
+
+- **Normal Mode (Dark Theme)**: Fullscreen view with the subtitle settings and fullscreen button side by side.
+  ![Nomral Mode](screenshots/zentisubs2.png)
 
 ## Contributing
 
